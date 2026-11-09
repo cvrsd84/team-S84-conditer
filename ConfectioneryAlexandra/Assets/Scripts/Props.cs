@@ -24,6 +24,8 @@ namespace AlexandraBakery
             case "rack":return "Подставка для формы";case "cupmat":return "Место для стакана";case "book":return "Книга рецептов";case "sink":return "Раковина";case "tap":return "Кран";
             case "oven":return "Духовка";case "dessert":return "Готовый десерт";case "heat":return "Конфорка";case "delivery":return "Выдача заказа";default:return id;}
         }
+        public static bool IsDry(string id)=>id=="flour"||id=="sugar"||id=="powder"||id=="cocoa"||id=="baking"||id=="vanilla"||id=="crumb";
+        public static bool IsDecoration(string id)=>System.Array.IndexOf(Extras,id)>=0;
         public static bool IsForm(string id)=>id=="round"||id=="square"||id=="muffinpan"||id=="tray";
         public static bool IsDish(string id)=>id=="bowl"||id=="cup"||IsForm(id)||id=="whisk"||id=="mixer"||id=="spatula"||id=="sieve";
         public static AtelierMesh Make(string id)
@@ -100,6 +102,15 @@ namespace AlexandraBakery
             case "figurine":m.Fruit(0,0,0,.10f,.22f,Cocoa);m.Fruit(0,.18f,0,.074f,.13f,Cocoa);m.Fruit(-.045f,.28f,0,.035f,.12f,Cocoa);m.Fruit(.045f,.28f,0,.035f,.12f,Cocoa);break;
             case "stencil":m.Turn(0,0,0,new[]{.16f,.16f,.08f,.08f},new[]{0,.024f,.024f,0},Metal,8);break;
             case "hand":m.Fruit(0,0,0,.075f,.19f,"C88869");for(int i=0;i<4;i++)m.Fruit(-.050f+i*.032f,.115f,-.041f,.024f,.083f,"D69877");m.Fruit(-.073f,.065f,-.025f,.030f,.085f,"D69877");m.Disc(0,-.06f,0,.077f,.085f,Mint);break;
+            case "sprinkle-mark":
+                for(int i=0;i<8;i++){float a=i*2.4f;float rr=.018f+.017f*(i%2);
+                    m.Rod(new Vector3(rr*Mathf.Cos(a),.005f,rr*Mathf.Sin(a)),new Vector3((rr+.012f)*Mathf.Cos(a),.006f,(rr+.012f)*Mathf.Sin(a)),.0045f,new[]{Rose,Gold,Mint,Milk}[i%4]);}break;
+            case "stencil-mark":
+                for(int i=0;i<8;i++){float a=i*Mathf.PI/4;
+                    m.Disc(Mathf.Cos(a)*.028f,.001f,Mathf.Sin(a)*.028f,.012f,.004f,Cocoa,8);}
+                m.Disc(0,.001f,0,.012f,.004f,Cocoa,8);break;
+            case "flour-pile":case "cocoa-pile":case "crumb-pile":
+                m.Turn(0,0,0,new[]{0,.23f,.19f,.10f,0},new[]{0,.003f,.035f,.072f,.088f},id=="flour-pile"?Milk:id=="cocoa-pile"?Cocoa:Gold,20);break;
             case "fill":m.Disc(0,0,0,.23f,.025f,Gold);break;
             case "spill":m.Fruit(0,0,0,.33f,.045f,Cocoa,15);break;
             case "berrydot":m.Fruit(0,0,0,.025f,.045f,Berry);break;

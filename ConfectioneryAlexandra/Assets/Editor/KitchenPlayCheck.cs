@@ -104,7 +104,23 @@ public static class KitchenPlayCheck
     static void Feed(Dose d,int amount){
         Act(d.id);var device=d.unit=="мл"?"cup":"scale";var tool=Accessible(device);
         int increment=d.unit=="шт"||d.amount<=10?1:5;
-        game.Adjust(tool,amount/increment,false);Act(device);Act("bowl",true);}
+        if(Props.IsDry(d.id)){
+            Act(device,true);
+            for(int i=0;i<30;i++)game.UpdateDryPour(tool,true,1f/60f,false);
+            int partial=game.MeasuredAmount;
+            Check(partial>0&&partial<amount,"Вес должен расти при удержании");
+            game.UpdateDryPour(tool,false,.75f,false);
+            Check(game.MeasuredAmount==partial,"Вес вырос после отпускания ЛКМ");
+            Act(device,true);
+            game.UpdateDryPour(null,true,.5f,false);
+            game.UpdateDryPour(tool,true,.5f,false);
+            Check(game.MeasuredAmount==partial,"Насыпание продолжилось после отвода прицела");
+            Act(device,true);
+            for(int i=0;game.MeasuredAmount<amount&&i<2000;i++)game.UpdateDryPour(tool,true,1f/90f,false);
+            game.UpdateDryPour(tool,false,.4f,false);
+            Check(game.MeasuredAmount==amount,"Неверный вес сыпучего "+d.id);
+        }else game.Adjust(tool,amount/increment,false);
+        Act(device);Act("bowl",true);}
     static void CheckTypography(){
         var style=new GUIStyle{font=game.interfaceFont,wordWrap=true,fontStyle=FontStyle.Bold};
         var recipes=JsonUtility.FromJson<Library>(game.catalogue.text).recipes;
@@ -125,7 +141,23 @@ public static class KitchenPlayCheck
         Check(game.objects.Count>50,"Сцена неполная");Stage(Step.Tutorial);
         Act("plate");Act("large");Stage(Step.Tutorial);
         foreach(var item in new[]{"sponge","icing","fruit"}){Act(item);Act("plate",true);}
-        Paint();Box("large");Check(game.Stars==5,"Штраф в день 1");Debug.Log("KITCHEN_QA_DAY1_PASS");
+        Paint();
+        for(int i=0;i<Props.Extras.Length;i++){
+            string id=Props.Extras[i];Act(id);Check(game.Held==game.objects[id],"Декор не берётся: "+id);
+            Act("dessert");game.EndPainting();Check(game.Held==game.objects[id],"Декор пропал при отмене");
+            Act("dessert");float a=i*Mathf.PI*2/Props.Extras.Length;
+            Check(game.Paint(.083f*new Vector2(Mathf.Cos(a),Mathf.Sin(a))),"Декор не наносится: "+id);
+            game.EndPainting();Stage(Step.Wrap);Check(!game.Held,"Декор остался в руке после нанесения");
+        }
+        Debug.Log("KITCHEN_SHELF_DECOR_PASS 5 decorations");
+        foreach(string id in new[]{"fridge","pantry","dishes"}){
+            var colliders=game.objects[id+"-frame"].GetComponents<BoxCollider>();
+            foreach(var shelf in colliders.Where(c=>c.size.y<.1f)){
+                float inner=colliders.Where(c=>c.center.x>0).Min(c=>c.center.x-c.size.x/2);
+                Check(shelf.size.x/2<inner,"Торец полки пересекает боковину: "+id);
+            }
+        }
+        Box("large");Check(game.Stars==5,"Штраф в день 1");Debug.Log("KITCHEN_QA_DAY1_PASS");
         for(int run=0;run<5;run++){
             game.Next();game.SelectOrder(run%4);yield return null;Stage(Step.Measure);
             Open("fridge");Open("pantry");Open("dishes");
@@ -158,7 +190,7 @@ public static class KitchenPlayCheck
             Stage(Step.Assemble);Act(form);Act("plate");if(game.Recipe.id=="vanilla"){Act("bowl");Act("plate");}Stage(Step.Decor);Act("plate");Paint();
             Box(run==4?"small":game.Recipe.box);
             Check(run==4?game.Stars<5:game.Stars==5,"Неожиданная оценка "+game.Stars+" за "+game.Recipe.id);
-            Debug.Log("KITCHEN_QA_DAY2_PASS "+game.Recipe.id+" stars="+game.Stars);yield return null;
+            Debug.Log("KITCHEN_DRY_POUR_PASS "+game.Recipe.id);Debug.Log("KITCHEN_QA_DAY2_PASS "+game.Recipe.id+" stars="+game.Stars);yield return null;
         }
     }
 }

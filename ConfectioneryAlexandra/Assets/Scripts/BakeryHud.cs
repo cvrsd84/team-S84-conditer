@@ -39,7 +39,10 @@ namespace AlexandraBakery
             if(t.purpose==Purpose.Door){var door=t.hinge?t:objects[t.id+"-frame"];return door.opened?"E  закрыть":"E  открыть";}
             if(t.id=="tap")return "E  вымыть посуду";if(t.id=="book")return "E  читать";
             if(t.id=="oven")return Stage==Step.Bake?"E  достать":"E  поставить форму";
+            if((t.id=="plate"||t.id=="dessert")&&HoldingDecoration&&CanAddShelfDecor)return "E  применить украшение";
+            if(Props.IsDecoration(t.id))return Held?"G  освободить руку":"E  взять украшение";
             if(t.id=="plate"||t.id=="dessert")return Stage==Step.Decor?"E  украсить":Stage==Step.Wrap?"E  взять   ·   ПКМ  украсить ещё":"E  собрать";
+            if(t.id=="scale"&&Held&&Props.IsDry(Held.id))return "Держите ЛКМ  насыпать   ·   E  взять порцию";
             if(t.id=="scale"||t.id=="cup"&&t.slot=="cupmat"&&Held)return "ЛКМ  добавить   ·   E  взять порцию";
             if(t.id=="large"||t.id=="small")return Stage==Step.Dispatch?"E  передать":"E  упаковать";
             if(t.id=="mat"||t.id=="rack"||t.id=="cupmat"||t.id=="sink"||t.id=="heat")return "E  поставить";
@@ -51,9 +54,9 @@ namespace AlexandraBakery
             float w=Screen.width/scale,h=Screen.height/scale;GUI.matrix=Matrix4x4.Scale(new Vector3(scale,scale,1));
             if(paused||bookOpen||Stage==Step.Pick||Stage==Step.Report){Modal(w,h);GUI.matrix=matrix;return;}
             if(painting){
-                Tile(new Rect(20,20,350,149),paper);Text(new Rect(38,34,324,27),Recipe.decoration,22,ink,true);
-                Text(new Rect(38,70,312,55),"ЛКМ — рисовать. Покрыто участков: "+sectors.Count+" из "+RequiredSectors+".",16,accent);
-                Text(new Rect(38,116,310,45),"1  Крем     2  Декор заказа\nКисть: "+(useCream?"крем":Recipe.decoration),15,ink);
+                Tile(new Rect(20,20,350,149),paper);Text(new Rect(38,34,324,27),shelfDecor!=null?Props.Name(shelfDecor):Recipe.decoration,22,ink,true);
+                Text(new Rect(38,70,312,55),(shelfDecor!=null&&shelfDecor!="sprinkles"?"ЛКМ — поставить украшение.":"Держите ЛКМ и ведите мышью.")+" Покрыто участков: "+sectors.Count+" из "+RequiredSectors+".",16,accent);
+                Text(new Rect(38,116,310,45),shelfDecor!=null?"Enter — закончить украшение":"1  Крем     2  Декор заказа\nКисть: "+(useCream?"крем":Recipe.decoration),15,ink);
                 if(Button(new Rect(w-217,h-68,195,44),"Готово   ↵"))EndPainting();
             }else{
                 float cw=360;Tile(new Rect(18,18,cw,147),paper);Tile(new Rect(18,18,5,147),pink);

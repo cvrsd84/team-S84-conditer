@@ -26,6 +26,10 @@ namespace AlexandraBakery
         readonly Dictionary<string,int> amounts=new Dictionary<string,int>();
         readonly List<string> notes=new List<string>(); readonly HashSet<int> sectors=new HashSet<int>();
         readonly HashSet<int> toppingSectors=new HashSet<int>();
+        string shelfDecor;
+        bool stampedShelfDecor;
+        bool HoldingDecoration=>Held&&Props.IsDecoration(Held.id);
+        bool CanAddShelfDecor=>Stage==Step.Decor||Stage==Step.Wrap||Stage==Step.Tutorial&&tutorial==2;
         bool useCream; int[] sectorMarks=new int[8];
         readonly List<Vector2> strokes=new List<Vector2>();
         BakeryTarget aim,portionTool,form,boxed;
@@ -56,7 +60,7 @@ namespace AlexandraBakery
             foreach(string item in new[]{"sponge","icing","fruit"}){var t=objects[item];var pos=t.transform.position;pos.z=-.34f;t.transform.position=pos;}
             Stage=Step.Tutorial;SetCursor();Physics.SyncTransforms();
         }
-        void SetCursor(){Cursor.lockState=IsGameplayInputBlocked?CursorLockMode.None:CursorLockMode.Locked;Cursor.visible=IsGameplayInputBlocked;}
+        void SetCursor(){StopDryPour();Cursor.lockState=IsGameplayInputBlocked?CursorLockMode.None:CursorLockMode.Locked;Cursor.visible=IsGameplayInputBlocked;}
         void Notify(string message){toast=message;toastLeft=3.8f;}
         void Beep(float pitch=1){speaker.pitch=pitch;speaker.PlayOneShot(actionSound);}
         void SetStep(Step step){Stage=step;SetCursor();}
@@ -77,22 +81,24 @@ namespace AlexandraBakery
                 if(painting)EndPainting();else if(bookOpen){bookOpen=false;SetCursor();}else if(Stage!=Step.Pick&&Stage!=Step.Report){paused=!paused;SetCursor();}return;}
             if(paused||bookOpen)return;
             AdvanceTime(Time.deltaTime);
-            if(painting){if(Input.GetKeyDown(KeyCode.Alpha1))useCream=true;if(Input.GetKeyDown(KeyCode.Alpha2))useCream=false;var pointer=overhead.ScreenPointToRay(Input.mousePosition);
+            if(painting){if(shelfDecor==null){if(Input.GetKeyDown(KeyCode.Alpha1))useCream=true;if(Input.GetKeyDown(KeyCode.Alpha2))useCream=false;}var pointer=overhead.ScreenPointToRay(Input.mousePosition);
                 var surface=new Plane(Vector3.up,dessertAnchor.position+Vector3.up*(TopHeight()+.012f));
                 if(brushTool&&surface.Raycast(pointer,out float tip))brushTool.transform.position=pointer.GetPoint(tip);
-                if(Input.GetMouseButton(0)&&Time.time>=nextPaint){nextPaint=Time.time+.035f;Ray r=overhead.ScreenPointToRay(Input.mousePosition);
+                bool stamp=shelfDecor!=null&&shelfDecor!="sprinkles";
+                if(stamp?Input.GetMouseButtonDown(0):Input.GetMouseButton(0)&&Time.time>=nextPaint){nextPaint=Time.time+.035f;Ray r=overhead.ScreenPointToRay(Input.mousePosition);
                 var plane=new Plane(Vector3.up,dessertAnchor.position+Vector3.up*TopHeight());if(plane.Raycast(r,out float d)){var v=r.GetPoint(d)-dessertAnchor.position;Paint(new Vector2(v.x,v.z));}}
                 if(Input.GetKeyDown(KeyCode.Return)||Input.GetKeyDown(KeyCode.E))EndPainting();return;}
             if(IsGameplayInputBlocked){Highlight(null);return;}
             Highlight(Trace(new Ray(eyes.transform.position,eyes.transform.forward)));
             if(Input.GetKeyDown(KeyCode.Tab)){bookOpen=true;page=Array.IndexOf(library,Recipe);SetCursor();return;}
             if(Input.GetKeyDown(KeyCode.G)){ReturnHand();return;}
-            if(!aim)return;
+            if(!aim){StopDryPour();return;}
             if(Stage==Step.Wrap&&!Held&&(aim.id=="plate"||aim.id=="dessert")&&Input.GetMouseButtonDown(1)){SetStep(Step.Decor);StartPainting();return;}
             int wheel=Math.Sign(Input.mouseScrollDelta.y);
             if(wheel!=0)Adjust(aim,wheel,Input.GetKey(KeyCode.LeftShift));
             if(Input.GetMouseButtonDown(0))Act(aim,true);
             else if(Input.GetKeyDown(KeyCode.E))Act(aim,false);
+            UpdateDryPour(aim,Input.GetMouseButton(0),Time.deltaTime,Input.GetKey(KeyCode.LeftShift));
         }
         public void AdvanceTime(float dt){
             toastLeft-=dt;moveLeft-=dt;if(leftHand){leftHand.SetActive(moveLeft>0);if(moveLeft>0)leftHand.transform.localRotation=Quaternion.Euler(48+10*Mathf.Sin(moveLeft*28),15,-14);}
@@ -118,9 +124,10 @@ namespace AlexandraBakery
             if(Held){Notify("Правая рука занята. G — вернуть предмет.");return;}
             if(t.slot!=""){occupied.Remove(t.slot);t.slot="";}
             Held=t;t.gameObject.SetActive(false);RefreshHand();Beep();
+            if(HoldingDecoration)Notify("Декор в руке. Примените его на собранном десерте или верните клавишей G.");
         }
         void Release(bool show){
-            if(!Held)return;Held.gameObject.SetActive(show);Held=null;handPortion=null;handCount=0;RefreshHand();
+            if(!Held)return;StopDryPour();Held.gameObject.SetActive(show);Held=null;handPortion=null;handCount=0;RefreshHand();
         }
         void Home(BakeryTarget t){t.slot="";t.transform.position=t.origin;t.gameObject.SetActive(true);}
         void ReturnHand(){
@@ -128,7 +135,7 @@ namespace AlexandraBakery
             if(Held.id=="dessert"){display.transform.SetParent(dessertAnchor,false);display.transform.localPosition=Vector3.zero;display.transform.localScale=Vector3.one;Release(true);return;}
             if(Held==form&&Stage>=Step.Load){Notify("Поставьте заполненную форму на подставку или в духовку.");return;}
             if(Held.id=="bowl" && amounts.Count>0 && Stage<=Step.Pour){Notify("Поставьте миску на коврик слева.");return;}
-            doseCount=0;portionTool=null;if(portionArt)Destroy(portionArt);var t=Held;Release(false);Home(t);Notify("Предмет возвращён на место.");
+            doseCount=0;portionTool=null;if(portionArt)Destroy(portionArt);portionArt=null;var t=Held;Release(false);Home(t);Notify("Предмет возвращён на место.");
         }
         IEnumerator RestoreStock(BakeryTarget t){yield return new WaitForSeconds(1.15f);if(Held!=t)Home(t);}
         void Consume(){var t=Held;Release(false);if(t.purpose==Purpose.Stock)StartCoroutine(RestoreStock(t));}
@@ -178,6 +185,11 @@ namespace AlexandraBakery
             if(display)Destroy(display);display=Studio.Model(parent,model,Vector3.zero);
         }
         void PlateAction(){
+            if(HoldingDecoration){
+                if(CanAddShelfDecor){shelfDecor=Held.id;stampedShelfDecor=false;StartPainting();}
+                else Notify("Сначала соберите основу и добавьте крем. G — вернуть украшение.");
+                return;
+            }
             if(Stage==Step.Tutorial){
                 string[] order={"sponge","icing","fruit"};
                 if(!Held||Held.id!=order[tutorial]){Notify(Guide());return;}
@@ -202,7 +214,9 @@ namespace AlexandraBakery
             painting=true;Highlight(null);overhead.transform.SetPositionAndRotation(dessertAnchor.position+Vector3.up*2.25f,Quaternion.Euler(90,0,0));
             brushTool=Studio.Group(studio,"Кисть кондитера",dessertAnchor.position);
             var brushHand=Studio.Model(brushTool.transform,"hand",new Vector3(-.13f,.12f,-.11f));brushHand.transform.localRotation=Quaternion.Euler(-40,0,-30);
-            var nozzle=Studio.Model(brushTool.transform,"bag",Vector3.zero);nozzle.transform.localRotation=Quaternion.Euler(-28,0,32);nozzle.transform.localScale=Vector3.one*.75f;
+            var tool=Studio.Model(brushTool.transform,shelfDecor??"bag",new Vector3(-.035f,.07f,-.04f));
+            tool.transform.localRotation=Quaternion.Euler(-28,0,32);
+            tool.transform.localScale=Vector3.one*(shelfDecor==null?.75f:.42f);
             overhead.orthographicSize=.67f;eyes.enabled=false;overhead.enabled=true;SetCursor();
         }
         public bool Paint(Vector2 uv){
@@ -215,16 +229,26 @@ namespace AlexandraBakery
                 if(Recipe.layout=="square"?Mathf.Abs(uv.x)>.29f||Mathf.Abs(uv.y)>.21f:radius>.321f)return false;
                 sector=(Mathf.FloorToInt((Mathf.Atan2(uv.y,uv.x)+Mathf.PI)*4/Mathf.PI))%8;}
             foreach(var p in strokes)if(Vector2.Distance(p,uv)<.035f)return false;
-            strokes.Add(uv);if(Recipe.layout=="six"||radius>.105f){sectors.Add(sector);sectorMarks[sector]++;if(!useCream)toppingSectors.Add(sector);}
-            var mark=Studio.Model(display.transform,useCream?"rosette":Recipe.topping,new Vector3(uv.x,TopHeight(),uv.y));
+            strokes.Add(uv);if(Recipe.layout=="six"||radius>.105f){sectors.Add(sector);sectorMarks[sector]++;if(shelfDecor==null&&!useCream)toppingSectors.Add(sector);}
+            string model=useCream?"rosette":Recipe.topping;
+            if(shelfDecor!=null){
+                model=shelfDecor=="sprinkles"?"sprinkle-mark":shelfDecor=="stencil"?"stencil-mark":shelfDecor;
+                stampedShelfDecor=true;
+                if(Stage==Step.Tutorial){tutorial=3;Stage=Step.Decor;}
+            }
+            var mark=Studio.Model(display.transform,model,new Vector3(uv.x,TopHeight(),uv.y));
+            if(shelfDecor=="flower"||shelfDecor=="cookie"||shelfDecor=="figurine")mark.transform.localScale=Vector3.one*.42f;
             mark.transform.localRotation=Quaternion.Euler(0,strokes.Count*137,0);return true;
         }
         int RequiredSectors=>Recipe.layout=="six"?6:8;
         public void EndPainting(){
-            if(!painting)return;painting=false;if(brushTool)Destroy(brushTool);overhead.enabled=false;eyes.enabled=true;
+            if(!painting)return;
+            if(stampedShelfDecor && HoldingDecoration)Consume();
+            shelfDecor=null;stampedShelfDecor=false;
+            painting=false;if(brushTool)Destroy(brushTool);overhead.enabled=false;eyes.enabled=true;
             if(strokes.Count>0){SetStep(Step.Wrap);
                 if(!objects.ContainsKey("dessert")){var g=Studio.Group(studio,"Готовый десерт",dessertAnchor.position);var t=g.AddComponent<BakeryTarget>();t.id="dessert";t.purpose=Purpose.Finished;Studio.Solid(g,new Vector3(0,.10f,0),new Vector3(.66f,.22f,.58f));objects["dessert"]=t;}
-                Notify("Возьмите десерт с подставки и отнесите к коробкам.");}
+                Notify(HoldingDecoration?"Украшение осталось в руке. E на десерте — попробовать снова.":"Десерт готов. Можно принести ещё декор с полки или взять заказ для упаковки.");}
             SetCursor();
         }
         void BoxAction(BakeryTarget t){
@@ -247,7 +271,7 @@ namespace AlexandraBakery
             if(Stage!=Step.Report)return;Day=2;SetStep(Step.Pick);}
         public void SelectOrder(int i){
             if(Stage!=Step.Pick||i<0||i>=menu.Length)return;
-            StopAllCoroutines();Recipe=menu[i];if(display)Destroy(display);if(parcel)Destroy(parcel);if(liquid)Destroy(liquid);if(portionArt)Destroy(portionArt);
+            StopAllCoroutines();Recipe=menu[i];if(display)Destroy(display);if(parcel)Destroy(parcel);if(liquid)Destroy(liquid);if(portionArt)Destroy(portionArt);portionArt=null;
             if(objects.TryGetValue("dessert",out var dessert)){objects.Remove("dessert");Destroy(dessert.gameObject);}
             foreach(var t in objects.Values){if(t.purpose==Purpose.Utensil||t.purpose==Purpose.Stock){Home(t);t.condition=Cleanliness.Clean;t.fill="";t.volume=0;}
                 if(t.purpose==Purpose.Supply)t.gameObject.SetActive(false);if(t.hinge)t.opened=false;}

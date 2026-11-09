@@ -9,25 +9,61 @@ namespace AlexandraBakery
         Dose Wanted(string id)=>Recipe.doses.FirstOrDefault(d=>d.id==id&&d.group==group&&!amounts.ContainsKey(d.id));
         Dose NextDose()=>Recipe.doses.FirstOrDefault(d=>d.group==group&&!amounts.ContainsKey(d.id));
         static int Increment(Dose d,bool coarse)=>d.unit=="шт"?1:coarse?25:d.amount<=10?1:5;
+        BakeryTarget pouringDevice;
+        double fractionalGrams;
+        public int MeasuredAmount=>doseCount;
+        void StopDryPour(){
+            pouringDevice=null;
+            fractionalGrams=0;
+            if(heldArt)heldArt.transform.localRotation=Quaternion.identity;
+        }
+        public void UpdateDryPour(BakeryTarget target,bool pressed,float dt,bool fine){
+            if(!pouringDevice)return;
+            if(!pressed || target!=pouringDevice || IsGameplayInputBlocked || !Held || handPortion!=null || Stage!=Step.Measure){
+                StopDryPour();return;
+            }
+            var dose=Wanted(Held.id);
+            if(dose==null){StopDryPour();return;}
+            double gramsPerSecond=dose.amount<=10?3:40;
+            fractionalGrams+=Mathf.Max(0,dt)*gramsPerSecond*(fine?.25:1);
+            int whole=(int)System.Math.Floor(fractionalGrams+1e-7);
+            if(whole<=0)return;
+            fractionalGrams=System.Math.Max(0,fractionalGrams-whole);
+            int next=Mathf.Min(2000,doseCount+whole);
+            if(next!=doseCount){doseCount=next;ShowMeasure(target,dose);}
+        }
+        void OnApplicationFocus(bool focused){if(!focused)StopDryPour();}
         public void Adjust(BakeryTarget t,int ticks,bool coarse){
             if(t.id=="oven"&&Stage==Step.Load){if(coarse)dial=Mathf.Clamp(dial+ticks,1,90);else temperature=Mathf.Clamp(temperature+ticks*5,80,240);return;}
-            if(!Held||Stage!=Step.Measure||handPortion!=null)return;
+            if(!Held||Stage!=Step.Measure||handPortion!=null||Props.IsDry(Held.id))return;
             var dose=Wanted(Held.id);if(dose!=null&&CanMeasure(t,dose)){portionTool=t;doseCount=Mathf.Clamp(doseCount+ticks*Increment(dose,coarse),0,2000);ShowMeasure(t,dose);}}
         bool CanMeasure(BakeryTarget t,Dose d)=>d.unit=="мл"?t.id=="cup"&&t.slot=="cupmat":t.id=="scale";
         void ShowMeasure(BakeryTarget device,Dose d){
-            if(portionArt)Destroy(portionArt);if(doseCount<=0)return;
+            if(doseCount<=0){if(portionArt)Destroy(portionArt);portionArt=null;return;}
             var p=device.transform.position+Vector3.up*(device.id=="scale"?.145f:.055f+.24f*Mathf.Clamp01(doseCount/300f));
-            portionArt=Studio.Model(studio,"fill",p);float size=device.id=="cup"?.49f:.20f+.55f*Mathf.Clamp01(doseCount/(float)d.amount);
-            portionArt.transform.localScale=new Vector3(size,.6f,size);Beep(1.1f);}
+            if(!portionArt){
+                string model=Props.IsDry(d.id)?(d.id=="cocoa"?"cocoa-pile":d.id=="crumb"?"crumb-pile":"flour-pile"):"fill";
+                portionArt=Studio.Model(studio,model,p);
+            }else portionArt.transform.position=p;
+            float size=device.id=="cup"?.49f:.20f+.55f*Mathf.Clamp01(doseCount/(float)d.amount);
+            portionArt.transform.localScale=new Vector3(size,size,size);}
         void Measure(BakeryTarget device,bool click){
             if(Stage!=Step.Measure){Notify(Guide());return;}
             if(handPortion!=null){Notify("Порция готова. ЛКМ по миске на коврике.");return;}
             var d=Wanted(Held.id);
             if(d==null){Notify("Этот продукт сейчас не нужен. G — вернуть на полку.");return;}
             if(!CanMeasure(device,d)){Notify(d.unit=="мл"?"Молоко отмеряют в стакане на подставке.":"Этот продукт отмеряют на весах.");return;}
-            if(click){Adjust(device,1,Input.GetKey(KeyCode.LeftShift));return;}
-            if(doseCount<=0){Notify("ЛКМ или колесо — отмерить. E — взять порцию.");return;}
-            handPortion=d.id;handCount=doseCount;RefreshHand();doseCount=0;portionTool=null;if(portionArt)Destroy(portionArt);Notify("Отмерено "+handCount+" "+d.unit+". ЛКМ по миске слева.");Beep();}
+            if(click){
+                if(Props.IsDry(d.id)){
+                    pouringDevice=device;portionTool=device;fractionalGrams=0;
+                    if(heldArt)heldArt.transform.localRotation=Quaternion.Euler(0,0,48);
+                    Beep(1.1f);
+                }else{Adjust(device,1,Input.GetKey(KeyCode.LeftShift));Beep(1.1f);}
+                return;
+            }
+            StopDryPour();
+            if(doseCount<=0){Notify(Props.IsDry(d.id)?"Удерживайте ЛКМ над весами, затем нажмите E.":"ЛКМ или колесо — отмерить. E — взять порцию.");return;}
+            handPortion=d.id;handCount=doseCount;RefreshHand();doseCount=0;portionTool=null;if(portionArt)Destroy(portionArt);portionArt=null;Notify("Отмерено "+handCount+" "+d.unit+". ЛКМ по миске слева.");Beep();}
         void BowlAction(BakeryTarget bowl){
             if(Stage==Step.Process){
                 if(group=="melt"){Notify(Guide());return;}
@@ -72,6 +108,7 @@ namespace AlexandraBakery
                 Place(form,"rack",Above("rack"));coolLeft=Recipe.coolMinutes*SecondsPerBakeMinute;SetStep(Step.Cool);Beep();return;}
             Notify(Guide());}
         string Guide(){
+            if(HoldingDecoration && CanAddShelfDecor)return "Подойдите к десерту на белой подставке, нажмите E и выберите место для украшения.";
             switch(Stage){
             case Step.Tutorial:
                 string[] needed={"sponge","icing","fruit"};
@@ -83,7 +120,7 @@ namespace AlexandraBakery
                 if(handPortion!=null)return "ЛКМ по миске на коврике — добавить отмеренную порцию.";
                 if(Held&&Wanted(Held.id)!=null)d=Wanted(Held.id);
                 string place=d.unit=="мл"?"мерный стакан на голубой подставке":"весы на острове";
-                return Props.Name(d.id)+" · "+d.amount+" "+d.unit+" · "+place+". ЛКМ/колесо — доза, E — взять порцию.";
+                return Props.Name(d.id)+" · "+d.amount+" "+d.unit+" · "+place+(Props.IsDry(d.id)?". Держите ЛКМ, чтобы сыпать. Shift — медленнее. E — взять порцию.":". ЛКМ/колесо — доза, E — взять порцию.");
             case Step.Process:return group=="melt"?"Возьмите миску и поставьте на конфорку над духовкой.":group=="crumb"?"Возьмите лопатку. ЛКМ по миске — измельчить бисквит.":"Возьмите чистый венчик или миксер. ЛКМ по миске — взбить.";
             case Step.Form:return "Возьмите форму из шкафа и поставьте на деревянную подставку. По рецепту: "+Props.Name(Recipe.form)+".";
             case Step.Pour:return "Возьмите миску с тестом. ЛКМ по форме на деревянной подставке.";
@@ -97,6 +134,7 @@ namespace AlexandraBakery
             default:return "";}
         }
         BakeryTarget Goal(){
+            if(HoldingDecoration && CanAddShelfDecor)return objects["plate"];
             string id=null;
             switch(Stage){
             case Step.Tutorial:id=Held?"plate":new[]{"sponge","icing","fruit"}[tutorial];break;

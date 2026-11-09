@@ -34,15 +34,17 @@ namespace AlexandraBakery
                     m.Box(xx,.23f,sign*(depth/2-.075f),step-.19f,.55f,.082f,Mint);m.Box(xx,.71f,sign*(depth/2-.021f),.19f,.035f,.045f,Gold);}}
             var g=Model(p,id,new Vector3(x,0,z),m);Solid(g,new Vector3(0,.53f,0),new Vector3(width,1.05f,depth));}
         static void Cabinet(Transform p,string id,string title,float x,string[] ids,Purpose kind,string tone){
-            const float width=2.35f;var m=new AtelierMesh();
-            m.Box(0,0,.22f,width,.15f,1.1f,Deep);m.Box(0,.14f,.70f,width,2.38f,.1f,tone);
-            for(int i=-1;i<=1;i+=2)m.Box(i*1.13f,.14f,.21f,.09f,2.38f,1.08f,tone);
-            for(int i=0;i<4;i++)m.Box(0,.28f+i*.59f,.20f,width,.07f,1.08f,i==3?tone:Wood);
+            const float width=2.35f;
+            const float shelfWidth=2.16f, shelfDepth=.93f, shelfZ=.19f;
+            var m=new AtelierMesh();
+            m.Box(0,0,.22f,width,.15f,1.1f,Deep);m.Box(0,.15f,.70f,shelfWidth,2.21f,.1f,tone);
+            for(int i=-1;i<=1;i+=2)m.Box(i*1.13f,.15f,.21f,.09f,2.21f,1.08f,tone);
+            for(int i=0;i<4;i++)m.Box(0,.28f+i*.59f,shelfZ,shelfWidth,.07f,shelfDepth,i==3?tone:Wood);
             m.Box(0,2.36f,.15f,width,.27f,1.13f,Deep);
             var body=Model(p,id+"-shelves",new Vector3(x,0,4.5f),m);
-            Solid(body,new Vector3(0,1.25f,.69f),new Vector3(width,2.52f,.12f));
-            for(int sign=-1;sign<=1;sign+=2)Solid(body,new Vector3(sign*1.13f,1.25f,.20f),new Vector3(.10f,2.52f,1.1f));
-            for(int i=0;i<4;i++)Solid(body,new Vector3(0,.315f+i*.59f,.20f),new Vector3(width,.07f,1.08f));
+            Solid(body,new Vector3(0,1.255f,.70f),new Vector3(shelfWidth,2.21f,.10f));
+            for(int sign=-1;sign<=1;sign+=2)Solid(body,new Vector3(sign*1.13f,1.255f,.21f),new Vector3(.09f,2.21f,1.08f));
+            for(int i=0;i<4;i++)Solid(body,new Vector3(0,.315f+i*.59f,shelfZ),new Vector3(shelfWidth,.07f,shelfDepth));
             Label(body.transform,title,0,2.49f,-.43f,.034f);
             var hinge=Group(body.transform,"Петля",new Vector3(-width/2,.12f,-.41f));var door=new AtelierMesh();
             door.Box(0,0,0,width-.045f,2.22f,.11f,tone);door.Box(0,.14f,-.065f,width-.27f,1.92f,.035f,id=="fridge"?Milk:Mint);
@@ -104,7 +106,13 @@ namespace AlexandraBakery
             var shelf=new AtelierMesh();shelf.Box(0,0,0,3.05f,.12f,.64f,Wood);
             var ledge=Model(p,"garnish-shelf",new Vector3(-3.7f,1.1f,-5.49f),shelf);
             Solid(ledge,new Vector3(0,.06f,0),new Vector3(3.05f,.12f,.64f));
-            for(int i=0;i<Props.Extras.Length;i++)Target(p,Props.Extras[i],Purpose.Stock,new Vector3(-4.89f+i*.58f,1.22f,-5.47f));
+            for(int i=0;i<Props.Extras.Length;i++){
+                var decor=Target(p,Props.Extras[i],Purpose.Stock,new Vector3(-4.89f+i*.58f,1.22f,-5.47f));
+                var hitbox=decor.GetComponent<BoxCollider>();
+                float height=Mathf.Max(.32f,hitbox.size.y);
+                hitbox.size=new Vector3(.58f,height,.49f);
+                hitbox.center=Vector3.up*(height/2);
+            }
             var light=Group(p,"Солнечный свет",Vector3.zero).AddComponent<Light>();light.type=LightType.Directional;light.intensity=1.18f;light.color=new Color(1,.94f,.85f);
             light.transform.rotation=Quaternion.Euler(48,-28,0);light.shadows=LightShadows.Soft;
             // The ceiling is decorative. Let sunlight reach the work surfaces.

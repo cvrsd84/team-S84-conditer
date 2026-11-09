@@ -24,7 +24,7 @@ public static class SceneGenerator
         var scene=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
         Studio.surface=MaterialAsset("Glaze","Atelier/Porcelain");MaterialAsset("Rim","Atelier/Selection");
         Studio.Bake=SaveMesh;
-        foreach(var list in new[]{Props.Pantry,Props.Cold,Props.Tools,Props.Extras,new[]{"sponge","icing","fruit","mat","rack","cupmat","plate","scale","book","small","large","cake","brownie","muffin","potato","hand","fill","spill","berrydot","bluedot","dust","cocoadot","parcel","portion","rosette"}})
+        foreach(var list in new[]{Props.Pantry,Props.Cold,Props.Tools,Props.Extras,new[]{"sponge","icing","fruit","mat","rack","cupmat","plate","scale","book","small","large","cake","brownie","muffin","potato","hand","fill","spill","berrydot","bluedot","dust","cocoadot","parcel","portion","rosette","sprinkle-mark","stencil-mark","flour-pile","cocoa-pile","crumb-pile"}})
             foreach(var id in list)SaveMesh(id,Props.Make(id));
         var game=new GameObject("Кондитерская Александры").AddComponent<BakeryGame>();
         game.interfaceFont=AssetDatabase.LoadAssetAtPath<Font>("Assets/TextMesh Pro/Fonts/LiberationSans.ttf");
