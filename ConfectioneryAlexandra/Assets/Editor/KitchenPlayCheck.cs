@@ -100,7 +100,7 @@ public static class KitchenPlayCheck
         else for(int i=0;i<8;i++){float a=(i+.5f)*Mathf.PI/4;Check(game.Paint(new Vector2(Mathf.Cos(a),Mathf.Sin(a))*.175f),"Кисть не рисует");}
         Check(!game.Paint(Vector2.one),"Штрих за пределами десерта");game.EndPainting();Stage(Step.Wrap);}
     static void Box(string box){
-        Act(box);Stage(Step.Wrap);Act("dessert");Act(box);Stage(Step.Dispatch);Act(box);Stage(Step.Report);}
+        Act(box);Stage(Step.Wrap);Act("dessert");Act(box);Stage(Step.Dispatch);Act(box);Stage(game.Served==game.Planned?Step.Summary:Step.Report);}
     static void Feed(Dose d,int amount){
         Act(d.id);var device=d.unit=="мл"?"cup":"scale";var tool=Accessible(device);
         int increment=d.unit=="шт"||d.amount<=10?1:5;
@@ -120,7 +120,16 @@ public static class KitchenPlayCheck
             game.UpdateDryPour(tool,false,.4f,false);
             Check(game.MeasuredAmount==amount,"Неверный вес сыпучего "+d.id);
         }else game.Adjust(tool,amount/increment,false);
-        Act(device);Act("bowl",true);}
+        Act(device);Act("bowl",true);
+        if(amount==d.amount && d.group=="base" && (d.id=="eggs"||d.id=="flour"||d.id=="cocoa"||d.id=="milk")){
+            var bowl=game.objects["bowl"].transform.Find("Содержимое миски");
+            Check(bowl!=null,"Не видно содержимого миски");
+            bool pool=d.id=="milk"||d.id=="cocoa";var layer=bowl.Find((pool?"Слой ":"Порция ")+d.id);
+            Check(layer&&layer.childCount==(d.id=="eggs"?amount:1),"Неверное число элементов для "+d.id);
+            string mesh=d.id=="eggs"?"egg-yolk":pool?d.id+"-surface":"flour-pile";
+            Check(layer.GetChild(0).GetComponent<MeshFilter>().sharedMesh.name==mesh,"Другая модель ингредиента "+d.id);
+        }
+    }
     static void CheckTypography(){
         var style=new GUIStyle{font=game.interfaceFont,wordWrap=true,fontStyle=FontStyle.Bold};
         var recipes=JsonUtility.FromJson<Library>(game.catalogue.text).recipes;
@@ -134,6 +143,15 @@ public static class KitchenPlayCheck
         foreach(var label in game.GetComponentsInChildren<TMPro.TMP_Text>(true)){
             label.ForceMeshUpdate();Check(!label.isTextTruncated,"Обрезана надпись: "+label.text);}
         Debug.Log("KITCHEN_TYPE_PASS 28 titles, 4 viewports and cabinet signs");
+    }
+    static void SeedShift(int day,string[] wanted){
+        var book=JsonUtility.FromJson<Library>(game.catalogue.text);
+        for(int seed=0;seed<20000;seed++){
+            UnityEngine.Random.InitState(seed);var rng=new System.Random(UnityEngine.Random.Range(0,int.MaxValue));
+            var p=day==2?book.regularPatterns[0]:book.regularPatterns[rng.Next(book.regularPatterns.Length)];
+            if(BakeryGame.PlanShift(book.recipes,p.levels,rng).Select(r=>r.id).SequenceEqual(wanted)){UnityEngine.Random.InitState(seed);return;}
+        }
+        throw new Exception("Не получен ожидаемый вариант смены");
     }
     static IEnumerator Scenario(){
         for(int i=0;i<8;i++)yield return null;
@@ -158,8 +176,16 @@ public static class KitchenPlayCheck
             }
         }
         Box("large");Check(game.Stars==5,"Штраф в день 1");Debug.Log("KITCHEN_QA_DAY1_PASS");
-        for(int run=0;run<5;run++){
-            game.Next();game.SelectOrder(run%4);yield return null;Stage(Step.Measure);
+        for(int run=0;run<8;run++){
+            if(game.Stage==Step.Summary){
+                string[] wanted=game.Day==1?new[]{"vanilla","brownie","muffin"}:game.Day==2?new[]{"creamcheese","ganache"}:game.Day==3?new[]{"petersburg","potato"}:new[]{"vanilla","muffin","brownie"};
+                SeedShift(game.Day+1,wanted);
+            }
+            game.Next();yield return null;Stage(Step.Measure);
+            string checkpoint=game.CaptureCheckpoint();
+            Check(game.RestoreCheckpoint(checkpoint),"Смена не восстанавливается");
+            Check(!game.RestoreCheckpoint("{}"),"Повреждённая запись принята");
+            yield return null;
             Open("fridge");Open("pantry");Open("dishes");
             Act("bowl");Act("mat");Act("cup");Act("cupmat");
             Act("jam");Act("scale",true);Act("bowl",true);Stage(Step.Measure);
@@ -167,31 +193,46 @@ public static class KitchenPlayCheck
             game.SendMessage("ReturnHand");
             string previous="";
             foreach(var d in game.Recipe.doses){
-                if(d.group=="cream")continue;
+                if(d.group==game.Recipe.finishGroup||d.group=="finish")continue;
                 if(d.group!=previous&&previous!=""){
                     Stage(Step.Process);
                     if(previous=="melt"){Act("bowl");Act("heat");}else{Act("spatula");Act("bowl",true);}
                     Stage(Step.Measure);}
                 if(run==0&&d.id=="flour"){Feed(d,100);Stage(Step.Measure);float end=Time.realtimeSinceStartup+1.3f;while(Time.realtimeSinceStartup<end)yield return null;}
-                Feed(d,run==4&&d.id=="sugar"?100:d.amount);previous=d.group;
+                Feed(d,run==7&&d.id=="sugar"?100:d.amount);previous=d.group;
             }
             Stage(Step.Process);Act("whisk");Act("bowl",true);Stage(Step.Form);
-            string form=run==4?"square":game.Recipe.form;Act(form);Act("rack");Stage(Step.Pour);Act("bowl");Act(form,true);
+            string form=run==7?"square":game.Recipe.form;Act(form);Act("rack");Stage(Step.Pour);Act("bowl");Act(form,true);
             if(game.Recipe.bakeMinutes>0){Stage(Step.Load);Act(form);var oven=Accessible("oven");
                 game.Adjust(oven,2,false);game.Adjust(oven,game.Recipe.bakeMinutes-20,true);Act("oven");Stage(Step.Bake);Act("oven");Stage(Step.Bake);
                 game.AdvanceTime(game.Recipe.bakeMinutes*.5f);Act("oven");Stage(Step.Cool);game.AdvanceTime(game.Recipe.coolMinutes*.5f+.01f);}
-            if(game.Recipe.doses.Any(d=>d.group=="cream")){
+            if(!string.IsNullOrEmpty(game.Recipe.finishGroup)){
                 if(run!=4){
                     Act("bowl");Act("sink");Act("tap");Act("bowl");Act("mat");
                     Act("whisk");Act("sink");Act("tap");Act("whisk");game.SendMessage("ReturnHand");}
                 else{Act("bowl");Act("mat");}
-                foreach(var d in game.Recipe.doses.Where(d=>d.group=="cream"))Feed(d,run==0&&d.id=="cream"?230:d.amount);
+                float available=Time.realtimeSinceStartup+1.2f;while(Time.realtimeSinceStartup<available)yield return null;
+                foreach(var d in game.Recipe.doses.Where(d=>d.group==game.Recipe.finishGroup))Feed(d,run==0&&d.id=="cream"?230:d.amount);
+                if(game.Recipe.finishGroup=="ganache"||game.Recipe.finishGroup=="custard"){
+                    Act("bowl");Act("heat");
+                    if(game.Recipe.finishGroup=="custard"){
+                        Stage(Step.CreamCool);game.AdvanceTime(6);
+                        foreach(var d in game.Recipe.doses.Where(d=>d.group=="finish"))Feed(d,d.amount);
+                    }
+                }
                 Act("whisk");Act("bowl",true);}
-            Stage(Step.Assemble);Act(form);Act("plate");if(game.Recipe.id=="vanilla"){Act("bowl");Act("plate");}Stage(Step.Decor);Act("plate");Paint();
-            Box(run==4?"small":game.Recipe.box);
-            Check(run==4?game.Stars<5:game.Stars==5,"Неожиданная оценка "+game.Stars+" за "+game.Recipe.id);
-            Debug.Log("KITCHEN_DRY_POUR_PASS "+game.Recipe.id);Debug.Log("KITCHEN_QA_DAY2_PASS "+game.Recipe.id+" stars="+game.Stars);yield return null;
+            Stage(Step.Assemble);Act(form);Act("plate");if(!string.IsNullOrEmpty(game.Recipe.finishGroup)){Act("bowl");Act("plate");}Stage(Step.Decor);Act("plate");Paint();
+            Box(run==7?"small":game.Recipe.box);
+            Check(run==7?game.Stars<5:game.Stars==5,"Неожиданная оценка "+game.Stars+" за "+game.Recipe.id);
+            Debug.Log("KITCHEN_DRY_POUR_PASS "+game.Recipe.id);Debug.Log("KITCHEN_ORDER_PASS day="+game.Day+" "+game.Recipe.id+" stars="+game.Stars);yield return null;
         }
+        game.Next();game.AdvanceTime(game.ShiftLimit);Stage(Step.Summary);
+        Check(game.Served==1&&game.Planned==3,"Неверный итог по времени");
+        string summary=game.CaptureCheckpoint();Check(game.RestoreCheckpoint(summary)&&game.Stage==Step.Summary,"Не восстановлен экран итогов");
+        game.Next();Check(game.Day==6,"Не открыт следующий день");game.CloseShift("Досрочное закрытие");
+        Check(game.Served==0&&game.Stage==Step.Summary,"Пустая смена не закрывается");
+        Debug.Log("KITCHEN_SHIFT_PASS schedules=111,22,31 deadline early-close checkpoint summary");
+
     }
 }
 

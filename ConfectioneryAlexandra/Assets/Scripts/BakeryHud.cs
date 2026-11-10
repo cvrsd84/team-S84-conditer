@@ -52,15 +52,17 @@ namespace AlexandraBakery
             if(Recipe==null)return;var matrix=GUI.matrix;
             float scale=Mathf.Min(Screen.width/1080f,Screen.height/690f);scale=Mathf.Max(scale,.12f);
             float w=Screen.width/scale,h=Screen.height/scale;GUI.matrix=Matrix4x4.Scale(new Vector3(scale,scale,1));
-            if(paused||bookOpen||Stage==Step.Pick||Stage==Step.Report){Modal(w,h);GUI.matrix=matrix;return;}
+            if(paused||bookOpen||IsEndScreen){Modal(w,h);GUI.matrix=matrix;return;}
             if(painting){
                 Tile(new Rect(20,20,350,149),paper);Text(new Rect(38,34,324,27),shelfDecor!=null?Props.Name(shelfDecor):Recipe.decoration,22,ink,true);
                 Text(new Rect(38,70,312,55),(shelfDecor!=null&&shelfDecor!="sprinkles"?"ЛКМ — поставить украшение.":"Держите ЛКМ и ведите мышью.")+" Покрыто участков: "+sectors.Count+" из "+RequiredSectors+".",16,accent);
                 Text(new Rect(38,116,310,45),shelfDecor!=null?"Enter — закончить украшение":"1  Крем     2  Декор заказа\nКисть: "+(useCream?"крем":Recipe.decoration),15,ink);
                 if(Button(new Rect(w-217,h-68,195,44),"Готово   ↵"))EndPainting();
             }else{
+                if(Day>1){Tile(new Rect(18,170,360,32),accent);
+                    Text(new Rect(27,173,342,24),"Заказ "+(Served+1)+" из "+Planned+"    ·    "+Recipe.difficulty+"/3    ·    Осталось "+Clock(ShiftLimit-shiftSeconds),15,Color.white,true);}
                 float cw=360;Tile(new Rect(18,18,cw,147),paper);Tile(new Rect(18,18,5,147),pink);
-                Text(new Rect(37,31,cw-30,21),"ДЕНЬ "+Day+"    /    "+Today.customer.ToUpperInvariant(),13,accent,true);
+                Text(new Rect(37,31,cw-30,21),"ДЕНЬ "+Day+"    /    "+Customer.ToUpperInvariant(),13,accent,true);
                 Text(new Rect(37,57,cw-33,55),Day==1?Today.title:Recipe.name,22,ink,true);
                 Text(new Rect(37,111,cw-34,49),Day==1?"Соберите ягодный торт и передайте его маме.":Recipe.instruction,16,ink);
                 string live=Status();if(live!=""){float ww=Stage==Step.Load?536:360;Tile(new Rect(w-ww-18,18,ww,56),ink);Text(new Rect(w-ww-6,24,ww-24,44),live,16,Color.white,true,TextAnchor.MiddleCenter);}
@@ -80,12 +82,32 @@ namespace AlexandraBakery
                 if(toastLeft>0){Tile(new Rect(w/2-340,h-151,680,38),accent);Text(new Rect(w/2-334,h-151,668,38),toast,15,Color.white,false,TextAnchor.MiddleCenter);}
             }GUI.matrix=matrix;
         }
+        static string Clock(float seconds){int n=Mathf.CeilToInt(Mathf.Max(0,seconds));return (n/60).ToString("00")+":"+(n%60).ToString("00");}
+        Vector2 summaryScroll;
+        void DrawDaySummary(float x,float y){
+            int earned=0,delta=0,total=0,totalStars=0;
+            foreach(var r in results){earned+=r.experience;delta+=r.reputation;total+=r.score;totalStars+=r.stars;}
+            Text(new Rect(x+34,y+85,582,30),closeReason,19,accent,true);
+            Text(new Rect(x+34,y+120,582,36),"Передано "+Served+" из "+Planned+"   ·   Осталось "+(Planned-Served)+(Day>1?"   ·   Время "+Clock(shiftSeconds):""),18,ink);
+            summaryScroll=GUI.BeginScrollView(new Rect(x+34,y+160,582,153),summaryScroll,new Rect(0,0,552,Planned*90));
+            for(int i=0;i<Planned;i++){
+                var r=i<Served?results[i]:null;
+                Text(new Rect(0,i*90,548,30),customers[i]+" · "+orders[i].name+" · "+orders[i].difficulty+"/3",16,ink,true);
+                Text(new Rect(0,i*90+30,548,24),r==null?"Заказ не передан":r.stars+"/5   ·   "+r.score+"/100   ·   Опыт +"+r.experience+"   ·   Репутация "+r.reputation.ToString("+0;-0;0"),15,accent);
+                if(r!=null)Text(new Rect(0,i*90+54,548,34),Day==1?"Мама: «Спасибо, родная! Это мой любимый торт».":string.IsNullOrEmpty(r.feedback)?"Пожелания клиента выполнены.":r.feedback,14,ink);
+            }
+            GUI.EndScrollView();
+            Text(new Rect(x+34,y+317,582,32),Served==0?"Оценок за смену нет":"Средняя оценка "+(totalStars/(float)Served).ToString("0.0")+"/5   ·   "+(total/(float)Served).ToString("0.0")+"/100",18,accent,true);
+            Text(new Rect(x+34,y+353,582,32),"Опыт +"+earned+" ("+xp+")    Репутация "+delta.ToString("+0;-0;0")+" ("+rep+")",16,ink);
+            if(Button(new Rect(x+34,y+398,582,50),"Начать день "+(Day+1)))Next();
+        }
         void Modal(float w,float h){
             Tile(new Rect(0,0,w,h),new Color(.07f,.13f,.12f,.75f));
             float x=(w-650)/2,y=(h-480)/2;Tile(new Rect(x,y,650,480),paper);Tile(new Rect(x,y,650,7),pink);
-            string title=paused?"Перерыв":bookOpen?"Книга рецептов":Stage==Step.Pick?"Первый самостоятельный шаг":"Заказ передан";
+            string title=paused?"Перерыв":bookOpen?"Книга рецептов":Stage==Step.Summary?"Итоги дня "+Day:"Заказ передан";
             Text(new Rect(x+34,y+28,590,49),title,30,ink,true);
             if(paused){Text(new Rect(x+34,y+96,575,72),"Духовка и охлаждение на паузе.",19,ink);
+                if(Day>1&&Button(new Rect(x+34,y+247,245,48),"Закончить смену")){CloseShift("Смена завершена игроком");return;}
                 if(Button(new Rect(x+34,y+175,245,48),"Вернуться на кухню")){paused=false;SetCursor();}return;}
             if(bookOpen){var r=library[page];Text(new Rect(x+34,y+84,582,54),r.name+"   ·   "+r.difficulty+"/3",21,accent,true);
                 var view=new Rect(x+34,y+145,582,222);scroll=GUI.BeginScrollView(view,scroll,new Rect(0,0,554,450));
@@ -93,15 +115,14 @@ namespace AlexandraBakery
                 if(Button(new Rect(x+34,y+394,130,46),"← Назад")){page=(page+library.Length-1)%library.Length;scroll=Vector2.zero;}
                 if(Button(new Rect(x+177,y+394,130,46),"Дальше →")){page=(page+1)%library.Length;scroll=Vector2.zero;}
                 if(Button(new Rect(x+398,y+394,212,46),"Закрыть")){bookOpen=false;SetCursor();}return;}
-            if(Stage==Step.Pick){Text(new Rect(x+34,y+90,582,42),"День 2. Выберите заказ Ирины.",19,ink);
-                for(int i=0;i<menu.Length;i++)if(Button(new Rect(x+34,y+149+i*68,582,52),menu[i].name))SelectOrder(i);return;}
+            if(Stage==Step.Summary){DrawDaySummary(x,y);return;}
             Text(new Rect(x+34,y+89,582,44),Stars+" / 5     ·     "+points+" из 100",26,pink,true);
             string review=Day==1?"Мама: «Спасибо, родная! Особенно приятно, что ты сделала его сама».":
-                Stars==5?"Ирина: «Всё по заказу. И как аккуратно украшено!»":"Ирина: «Спасибо за десерт. Есть пара пожеланий к следующему заказу».";
+                results[Served-1].customer+(Stars==5?" · «Всё по заказу. Как аккуратно украшено!»":" · «Спасибо! Есть пожелания к следующему заказу».");
             Text(new Rect(x+34,y+145,582,62),review,18,ink);
             Text(new Rect(x+34,y+218,582,115),notes.Count==0?"Заказ и пожелания выполнены.":string.Join("  ·  ",notes),16,ink);
-            Text(new Rect(x+34,y+341,582,40),"Опыт  +"+Stars*12+"   ("+xp+")       Репутация  "+(Stars>=2?"+":"")+(Stars-2)+"   ("+rep+")",17,accent,true);
-            if(Button(new Rect(x+34,y+398,582,50),Day==1?"Начать день 2":"Приготовить другой заказ"))Next();
+            Text(new Rect(x+34,y+341,582,40),"Опыт  +"+results[Served-1].experience+"   ("+xp+")       Репутация  "+(Stars>=2?"+":"")+(Stars-2)+"   ("+rep+")",17,accent,true);
+            if(Button(new Rect(x+34,y+398,582,50),"Продолжить смену"))Next();
         }
     }
 }

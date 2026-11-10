@@ -70,6 +70,18 @@ namespace AlexandraBakery
                     foreach(int sign in new[]{-1,1}){Vector3 mid=new Vector3(p.x,.10f+sign*p.y,sign*p.z);m.Rod(new Vector3(.04f,.05f,0),mid,.008f,Metal);m.Rod(mid,new Vector3(.29f,.095f,0),.008f,Metal);}}break;
             case "mixer":m.Box(0,.12f,0,.36f,.18f,.18f,Rose);m.Box(-.04f,.29f,0,.18f,.06f,.1f,Milk);for(int i=0;i<2;i++)m.Disc(.06f+i*.09f,0,0,.032f,.145f,Metal);break;
             case "bag":m.Turn(0,0,0,new[]{.02f,.04f,.13f,.105f,.04f,.07f,0},new[]{0,.06f,.33f,.38f,.40f,.45f,.45f},Milk,12);break;
+            case "portion-cup":m.Turn(0,0,0,new[]{0,.08f,.14f,.14f,.125f,0},new[]{0,0,.115f,.13f,.13f,.08f},Milk);break;
+            case "egg-yolk":m.Fruit(0,0,0,.052f,.034f,"F3AF28",18);break;
+            case "milk-surface":case "cream-surface":case "cocoa-surface":
+                m.Turn(0,0,0,new[]{0,.205f,.218f,.215f,0},new[]{0,0,.009f,.014f,.015f},id=="milk-surface"?"F9F6EC":id=="cream-surface"?"F1D99D":"60392A",32);
+                if(id=="cream-surface")m.Fruit(.045f,.012f,0,.054f,.022f,"F7E8BC",14);break;
+            case "sugar-pile":m.Turn(0,0,0,new[]{0,.17f,.11f,0},new[]{0,0,.045f,.073f},"F3EDD9",12);break;
+            case "butter-piece":m.Box(0,0,0,.059f,.035f,.049f,Gold);break;
+            case "chocolate-chip":m.Fruit(0,0,0,.033f,.043f,Cocoa,8);break;
+            case "ganache-cake":case "custard-cake":
+                m.Disc(0,0,0,.33f,.105f,id=="ganache-cake"?Cocoa:Wood);
+                m.Disc(0,.105f,0,.33f,.068f,id=="ganache-cake"?Dark:Milk);m.Disc(0,.173f,0,.33f,.11f,id=="ganache-cake"?Cocoa:Gold);
+                m.Disc(0,.283f,0,.335f,.054f,id=="ganache-cake"?Dark:"ECCC8A");break;
             case "portion":m.Turn(0,0,0,new[]{0,.08f,.14f,.14f,.125f,0},new[]{0,0,.115f,.13f,.13f,.105f},Milk);m.Fruit(0,.096f,0,.109f,.052f,Gold);break;
             case "icing":
                 m.Turn(0,0,0,new[]{0,.12f,.21f,.23f,.23f,.21f,.12f,0},new[]{0,0,.10f,.18f,.20f,.20f,.05f,.05f},Rose);

@@ -94,7 +94,8 @@
       "model": "cake",
       "topping": "berrydot",
       "layout": "round",
-      "topHeight": 0.337
+      "topHeight": 0.337,
+      "finishGroup": "cream"
     },
     {
       "name": "Шоколадный брауни-торт",
@@ -381,12 +382,101 @@
         "Разрезать корж, промазать, украсить ягодами (вид сверху)."
       ],
       "assembly": "Взбить масло с сахаром. Добавить яйца, затем муку, разрыхлитель, ванилин, молоко. Печь в Ø 22 см 40 мин (180°C). Остудить 20 мин. Взбить творожный сыр, сливки и пудру. Разрезать корж, промазать, украсить ягодами (вид сверху).",
-      "decoration": "Разрезать корж, промазать, украсить ягодами (вид сверху).",
+      "decoration": "Ягодный венок",
       "bakeMinutes": 40,
       "temperatureC": 180,
       "critical": false,
-      "fullyPlayable": false,
-      "form": "Круглая форма Ø 22 см"
+      "fullyPlayable": true,
+      "form": "round",
+      "id": "creamcheese",
+      "finishGroup": "cream",
+      "coolMinutes": 20,
+      "model": "cake",
+      "topping": "berrydot",
+      "instruction": "Сырный крем между коржами и ягоды по кругу",
+      "topHeight": 0.337,
+      "layout": "round",
+      "formCapacity": 1150,
+      "box": "large",
+      "doses": [
+        {
+          "id": "flour",
+          "amount": 250,
+          "unit": "г",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "sugar",
+          "amount": 200,
+          "unit": "г",
+          "group": "base",
+          "key": true
+        },
+        {
+          "id": "eggs",
+          "amount": 4,
+          "unit": "шт",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "butter",
+          "amount": 150,
+          "unit": "г",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "milk",
+          "amount": 100,
+          "unit": "мл",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "vanilla",
+          "amount": 5,
+          "unit": "г",
+          "group": "base",
+          "key": true
+        },
+        {
+          "id": "baking",
+          "amount": 10,
+          "unit": "г",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "cheese",
+          "amount": 400,
+          "unit": "г",
+          "group": "cream",
+          "key": false
+        },
+        {
+          "id": "cream",
+          "amount": 150,
+          "unit": "мл",
+          "group": "cream",
+          "key": false
+        },
+        {
+          "id": "powder",
+          "amount": 100,
+          "unit": "г",
+          "group": "cream",
+          "key": true
+        },
+        {
+          "id": "berries",
+          "amount": 200,
+          "unit": "г",
+          "group": "cream",
+          "key": true
+        }
+      ]
     },
     {
       "name": "Красный бархат (Red Velvet)",
@@ -544,12 +634,87 @@
         "Покрыть торт (вид сверху)."
       ],
       "assembly": "Смешать сухие, добавить яйца, масло, молоко. Взбить. Печь 35 мин (180°C). Ганаш: нагреть сливки, добавить шоколад, размешать. Покрыть торт (вид сверху).",
-      "decoration": "Покрыть торт (вид сверху).",
+      "decoration": "Шоколадное покрытие",
       "bakeMinutes": 35,
       "temperatureC": 180,
       "critical": false,
-      "fullyPlayable": false,
-      "form": "Круглая форма Ø 20 см"
+      "fullyPlayable": true,
+      "form": "round",
+      "id": "ganache",
+      "finishGroup": "ganache",
+      "coolMinutes": 12,
+      "model": "ganache-cake",
+      "topping": "cocoadot",
+      "instruction": "Растопить шоколад в сливках и покрыть корж",
+      "topHeight": 0.337,
+      "layout": "round",
+      "formCapacity": 1150,
+      "box": "large",
+      "doses": [
+        {
+          "id": "flour",
+          "amount": 200,
+          "unit": "г",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "sugar",
+          "amount": 200,
+          "unit": "г",
+          "group": "base",
+          "key": true
+        },
+        {
+          "id": "cocoa",
+          "amount": 80,
+          "unit": "г",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "eggs",
+          "amount": 3,
+          "unit": "шт",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "butter",
+          "amount": 150,
+          "unit": "г",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "milk",
+          "amount": 150,
+          "unit": "мл",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "baking",
+          "amount": 10,
+          "unit": "г",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "cream",
+          "amount": 200,
+          "unit": "мл",
+          "group": "ganache",
+          "key": false
+        },
+        {
+          "id": "chocolate",
+          "amount": 200,
+          "unit": "г",
+          "group": "ganache",
+          "key": true
+        }
+      ]
     },
     {
       "name": "Наполеон (Упрощенный)",
@@ -620,12 +785,101 @@
         "Собрать торт."
       ],
       "assembly": "Испечь бисквит (35 мин). Заварной крем: смешать желтки, сахар, муку. Нагреть молоко, влить в смесь, варить до загустения. Остудить. Взбить масло с кремом. Собрать торт.",
-      "decoration": "Собрать торт.",
+      "decoration": "Сахарная пудра",
       "bakeMinutes": 35,
-      "temperatureC": 0,
+      "temperatureC": 180,
       "critical": false,
-      "fullyPlayable": false,
-      "form": "Круглая форма Ø 20 см"
+      "fullyPlayable": true,
+      "form": "round",
+      "id": "petersburg",
+      "finishGroup": "custard",
+      "coolMinutes": 15,
+      "model": "custard-cake",
+      "topping": "dust",
+      "instruction": "Заварной крем между слоями и тонкая пудра сверху",
+      "topHeight": 0.337,
+      "layout": "round",
+      "formCapacity": 1150,
+      "box": "large",
+      "doses": [
+        {
+          "id": "flour",
+          "amount": 170,
+          "unit": "г",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "sugar",
+          "amount": 140,
+          "unit": "г",
+          "group": "base",
+          "key": true
+        },
+        {
+          "id": "eggs",
+          "amount": 3,
+          "unit": "шт",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "baking",
+          "amount": 8,
+          "unit": "г",
+          "group": "base",
+          "key": false
+        },
+        {
+          "id": "eggs",
+          "amount": 2,
+          "unit": "шт",
+          "group": "custard",
+          "key": false
+        },
+        {
+          "id": "sugar",
+          "amount": 60,
+          "unit": "г",
+          "group": "custard",
+          "key": true
+        },
+        {
+          "id": "flour",
+          "amount": 30,
+          "unit": "г",
+          "group": "custard",
+          "key": false
+        },
+        {
+          "id": "milk",
+          "amount": 500,
+          "unit": "мл",
+          "group": "custard",
+          "key": false
+        },
+        {
+          "id": "vanilla",
+          "amount": 5,
+          "unit": "г",
+          "group": "custard",
+          "key": true
+        },
+        {
+          "id": "butter",
+          "amount": 100,
+          "unit": "г",
+          "group": "finish",
+          "key": false
+        },
+        {
+          "id": "powder",
+          "amount": 50,
+          "unit": "г",
+          "group": "finish",
+          "key": true
+        }
+      ]
     },
     {
       "name": "Торт «Крокембуш»",
@@ -1221,7 +1475,7 @@
       "form": "Силиконовые формочки"
     }
   ],
-  "gameSecondsPerSecond": 15,
+  "gameSecondsPerSecond": 10,
   "days": [
     {
       "number": 1,
@@ -1236,24 +1490,38 @@
       "title": "Первый самостоятельный шаг",
       "customer": "Ирина",
       "hints": true,
-      "orders": 1,
-      "minimumXP": 0
-    },
-    {
-      "number": 3,
-      "title": "Экзамен",
-      "customer": "",
-      "hints": false,
-      "orders": 1,
-      "minimumXP": 100
-    },
-    {
-      "number": 4,
-      "title": "Рабочая смена",
-      "customer": "",
-      "hints": false,
       "orders": 3,
-      "minimumXP": 180
+      "minimumXP": 0
     }
+  ],
+  "shiftHours": 8,
+  "regularPatterns": [
+    {
+      "levels": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "levels": [
+        2,
+        2
+      ]
+    },
+    {
+      "levels": [
+        3,
+        1
+      ]
+    }
+  ],
+  "customers": [
+    "Ирина",
+    "Алина",
+    "Сергей",
+    "Софья",
+    "Михаил",
+    "Вера"
   ]
 }
